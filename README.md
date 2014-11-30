@@ -1,6 +1,7 @@
 # SiteWatcher
 
-TODO: Write a gem description
+I wrote this to notify me when the Wii U Gamecube controller adapter becomes
+available.
 
 ## Installation
 
