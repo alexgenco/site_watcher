@@ -6,19 +6,21 @@ class SiteWatcher
   class CSSTest
     def initialize(html)
       @html = html
-      @pass = true
+      @results = []
     end
 
     def pass?
-      !!@pass
+      @results.all?
     end
 
     def includes(css)
-      @pass = !!@html.at_css(css)
+      @results << !!@html.at_css(css)
+      self
     end
 
     def excludes(css)
-      @pass = !@html.at_css(css)
+      @results << !@html.at_css(css)
+      self
     end
   end
 
