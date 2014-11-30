@@ -4,6 +4,8 @@ require "nokogiri"
 
 class SiteWatcher
   def self.watch(opts={}, &block)
+    trap(:SIGINT) { abort(?\n) }
+
     sleep_interval = opts.fetch(:sleep, 0)
 
     new([]).tap do |instance|
