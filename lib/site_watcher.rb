@@ -53,19 +53,23 @@ class SiteWatcher
     end
   end
 
-  def initialize(url)
+  def initialize(url, &test_handler)
     raise(ArgumentError, "block required") unless block_given?
 
     @url = url
-    @page = Page.new(open(url))
-    yield @page
+    @test_handler = test_handler
   end
 
-  def watch(&block)
+  def watch(&result_handler)
     raise(ArgumentError, "block required") unless block_given?
-    yield result = Result.new
 
-    if @page.tests_pass?
+    page = Page.new(open(@url))
+    @test_handler.call(page)
+
+    result = Result.new
+    result_handler.call(result)
+
+    if page.tests_pass?
       result.success.call(@url)
     else
       result.failure.call(@url)
