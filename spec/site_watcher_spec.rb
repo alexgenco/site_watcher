@@ -1,5 +1,3 @@
-require "site_watcher"
-
 RSpec.describe SiteWatcher do
   it "works" do
     url = "http://www.gamestop.com/wii-u/accessories/wii-u-gamecube-adapter/115426"
