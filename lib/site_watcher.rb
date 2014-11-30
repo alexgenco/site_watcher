@@ -13,7 +13,7 @@ class SiteWatcher
       !!@pass
     end
 
-    def has(css)
+    def includes(css)
       @pass = !@html.at_css(css).nil?
     end
   end
