@@ -14,7 +14,11 @@ class SiteWatcher
     end
 
     def includes(css)
-      @pass = !@html.at_css(css).nil?
+      @pass = !!@html.at_css(css)
+    end
+
+    def excludes(css)
+      @pass = !@html.at_css(css)
     end
   end
 
