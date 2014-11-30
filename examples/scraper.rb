@@ -1,4 +1,9 @@
 #!/usr/bin/env ruby -I./lib
+#
+# This script will watch gamestop.com until the "Not Available" button goes away
+# on the Wii U Gamecube controller adapter page. When it does, it will email me.
+#
+# NOTE: You'll need to setup a mail server on your VPS: http://bit.ly/1y9RMs9
 
 require "site_watcher"
 
