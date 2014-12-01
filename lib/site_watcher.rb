@@ -1,19 +1,18 @@
 require "site_watcher/version"
 require "open-uri"
 require "nokogiri"
+require "json"
 
 class SiteWatcher
   def self.watch(opts={}, &block)
     trap(:SIGINT) { abort(?\n) }
 
-    sleep_interval = opts.fetch(:sleep, 0)
+    sleep_interval = opts.fetch(:sleep, 5)
 
-    new([]).tap do |instance|
-      DSL::Top.new(instance).instance_eval(&block)
-    end.watch(sleep_interval)
+    dsl = DSL::Top.new
+    dsl.instance_eval(&block)
+    new(dsl.pages).watch(sleep_interval)
   end
-
-  attr_accessor :pages
 
   def initialize(pages)
     @pages = pages
@@ -21,24 +20,23 @@ class SiteWatcher
 
   def watch(sleep_interval)
     @pages.cycle do |page|
-      if page.reset.fulfilled?
-        @pages.delete(page)
-      else
-        sleep(sleep_interval)
-      end
+      @pages.delete(page) if page.fulfilled?
+      sleep(sleep_interval)
     end
   end
 
   module DSL
     class Top
-      def initialize(watcher)
-        @watcher = watcher
+      attr_reader :pages
+
+      def initialize
+        @pages = []
       end
 
       def page(url, &block)
         Page.new(url).tap do |page|
           page.instance_eval(&block)
-          @watcher.pages << page
+          @pages << page
         end
       end
     end
@@ -49,15 +47,6 @@ class SiteWatcher
       def initialize(url)
         @url = url
         @tests = []
-      end
-
-      def reset
-        @document = nil
-        self
-      end
-
-      def document
-        @document ||= Nokogiri::HTML(open(@url))
       end
 
       def fulfilled?
@@ -84,41 +73,119 @@ class SiteWatcher
       def initialize(page, &block)
         @page = page
         @css = []
+        @json = []
         instance_eval(&block)
       end
 
       def fulfilled?
-        @css.all?(&:fulfilled?)
+        @css.all?(&:fulfilled?) &&
+          @json.all?(&:fulfilled?)
       end
 
       def css
-        CSS.new(@page.document).tap do |css|
+        CSS.new(@page.url).tap do |css|
           @css << css
+        end
+      end
+
+      def json
+        JSON.new(@page.url).tap do |json|
+          @json << json
         end
       end
     end
 
     class CSS
-      def initialize(document)
-        @document = document
+      def initialize(url)
+        @url = url
         @exclusions = []
         @inclusions = []
       end
 
       def fulfilled?
+        @document = nil
         @inclusions.all? do |css|
-          @document.at_css(css)
+          document.at_css(css)
         end && @exclusions.all? do |css|
-          !@document.at_css(css)
+          !document.at_css(css)
         end
+      end
+
+      def document
+        @document ||= Nokogiri::HTML(open(@url))
       end
 
       def excludes(str)
         @exclusions << str
+        self
       end
 
       def includes(str)
         @inclusions << str
+        self
+      end
+    end
+
+    class JSON
+      class Test
+        def initialize(url, path)
+          @path = path
+          @url = url
+          @includes = []
+          @excludes = []
+        end
+
+        def fulfilled?
+          @content = nil
+
+          @includes.all? do |incl|
+            case incl
+            when String
+              content.include?(incl)
+            when Regexp
+              content =~ incl
+            end
+          end && @excludes.all? do |excl|
+            case excl
+            when String
+              !content.include?(excl)
+            when Regexp
+              content !~ excl
+            end
+          end
+        end
+
+        def content
+          @content ||= begin
+            json = ::JSON.load(open(@url))
+            @path.inject(json, :fetch)
+          end
+        end
+
+        def excludes(str_or_regex)
+          @excludes << str_or_regex
+          self
+        end
+
+        def includes(str_or_regex)
+          @includes << str_or_regex
+          self
+        end
+      end
+
+      def initialize(url)
+        @url = url
+        @tests = []
+      end
+
+      def fulfilled?
+        @tests.all?(&:fulfilled?)
+      end
+
+      def at(*path)
+        Test.new(@url, path).tap do |test|
+          @tests << test
+        end
       end
     end
   end
