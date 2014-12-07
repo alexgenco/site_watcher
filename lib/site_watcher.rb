@@ -22,13 +22,13 @@ class SiteWatcher
 
   def watch(delay)
     @pages.cycle do |page|
-      #begin
+      begin
         page.__run!
         @pages.delete(page)
-      #rescue ::RSpec::Expectations::ExpectationNotMetError
-      #rescue => e
-        #$stderr.puts("Exception on #{page.url}: #{e.inspect}")
-      #end
+      rescue ::RSpec::Expectations::ExpectationNotMetError
+      rescue => e
+        $stderr.puts("Exception on #{page.url}: #{e.inspect}")
+      end
 
       sleep(delay) if @pages.last == page
     end
