@@ -3,22 +3,6 @@
 I wrote this to notify me when the Wii U Gamecube controller adapter becomes
 available.
 
-## Installation
-
-Add this line to your application's Gemfile:
-
-```ruby
-gem "site_watcher"
-```
-
-And then execute:
-
-    $ bundle
-
-Or install it yourself as:
-
-    $ gem install site_watcher
-
 ## Usage
 
 Here's an example script. I'm using this to monitor gamestop.com and bestbuy.com:
@@ -26,7 +10,7 @@ Here's an example script. I'm using this to monitor gamestop.com and bestbuy.com
 ```ruby
 require "site_watcher"
 
-SiteWatcher.watch(:every => 2) do
+SiteWatcher.watch(every: 2) do
   # HTML
   page("http://www.gamestop.com/wii-u/accessories/wii-u-gamecube-adapter/115426") do
     # Use RSpec to describe your expectations.
