@@ -37,7 +37,7 @@ SiteWatcher.watch(every: 2) do
     test do |json|
       # `json` is a hash of the parsed JSON body.
       expect(
-        json[0][:availability][:ship][:displayMessage]
+        json[0]["availability"]["ship"]["displayMessage"]
       ).not_to match(/not available/i)
     end
   end

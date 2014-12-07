@@ -33,7 +33,6 @@ RSpec.describe "SiteWatcher.watch" do
       page("http://httpbin.org/get") do
         test do |json|
           expect(json["headers"]["Host"]).to eq("httpbin.org")
-          expect(json[:headers][:Host]).to eq("httpbin.org")
         end
 
         fulfilled do
