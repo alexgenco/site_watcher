@@ -44,6 +44,8 @@ SiteWatcher.watch(every: 2) do
 end
 ```
 
+This script will block until all expectations have been fulfilled.
+
 ## Contributing
 
 1. Fork it ( https://github.com/[my-github-username]/site_watcher/fork )
