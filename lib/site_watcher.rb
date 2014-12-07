@@ -58,6 +58,9 @@ class SiteWatcher
         else
           false
         end
+      rescue EOFError, OpenURI::HTTPError => e
+        $stderr.puts "Error on #{@url}: #{e.inspect}"
+        false
       end
 
       def test(&block)
