@@ -41,7 +41,7 @@ class SiteWatcher
   end
 
   module DSL
-    class Top
+    class Top < BasicObject
       attr_reader :pages
 
       def initialize
@@ -49,14 +49,13 @@ class SiteWatcher
       end
 
       def page(url, &block)
-        Page.new(url).tap do |page|
-          page.instance_eval(&block)
-          @pages << page
-        end
+        page = Page.new(url)
+        page.instance_eval(&block)
+        @pages << page
       end
     end
 
-    class Page
+    class Page < BasicObject
       include ::RSpec::Matchers
       attr_reader :url
 
@@ -74,7 +73,7 @@ class SiteWatcher
       end
 
       def __run!
-        open(@url) do |response|
+        ::OpenURI.open_uri(@url) do |response|
           case response.content_type
           when /json/i
             page = ::JSON.parse(response.read)
