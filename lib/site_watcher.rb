@@ -2,6 +2,7 @@ require "site_watcher/version"
 
 require "capybara"
 require "rspec/expectations"
+require "active_support/core_ext/hash/indifferent_access"
 require "open-uri"
 require "json"
 require "logger"
@@ -73,7 +74,7 @@ class SiteWatcher
         open(@url) do |response|
           case response.content_type
           when /json/i
-            page = ::JSON.parse(response.read, :symbolize_names => true)
+            page = ::JSON.parse(response.read).with_indifferent_access
           else
             page = ::Capybara::Node::Simple.new(response.read)
           end
