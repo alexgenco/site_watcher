@@ -62,6 +62,34 @@ RSpec.describe "SiteWatcher.watch" do
     expect(_fulfilled).to be(true)
   end
 
+  it "watches multiple pages" do
+    _fulfilled = []
+
+    SiteWatcher.watch(:every => 0) do
+      page("http://httpbin.org/html") do
+        test do |html|
+          expect(html).to have_selector("body h1")
+        end
+
+        fulfilled do
+          _fulfilled << :html
+        end
+      end
+
+      page("http://httpbin.org/get") do
+        test do |json|
+          expect(json["headers"]["Host"]).to eq("httpbin.org")
+        end
+
+        fulfilled do
+          _fulfilled << :json
+        end
+      end
+    end
+
+    expect(_fulfilled).to eq([:html, :json])
+  end
+
   it "retries when expectations aren't fulfilled" do
     _fulfilled = false
     _tries = 0
