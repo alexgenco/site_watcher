@@ -75,10 +75,10 @@ class SiteWatcher
           else
             page = ::Capybara::Node::Simple.new(response.read)
           end
-        end
 
-        @tests.each { |test| test.call(page) }
-        @fulfilled.call(@url) if @fulfilled.respond_to?(:call)
+          @tests.each { |test| test.call(page) }
+          @fulfilled.call(@url) if @fulfilled.respond_to?(:call)
+        end
       end
     end
   end
