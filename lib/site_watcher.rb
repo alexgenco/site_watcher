@@ -4,6 +4,7 @@ require "capybara"
 require "rspec/expectations"
 require "open-uri"
 require "json"
+require "logger"
 
 class SiteWatcher
   def self.watch(opts={}, &block)
@@ -18,6 +19,7 @@ class SiteWatcher
 
   def initialize(pages)
     @pages = pages
+    @logger = ::Logger.new($stderr)
   end
 
   def watch(delay)
@@ -27,7 +29,7 @@ class SiteWatcher
         @pages.delete(page)
       rescue ::RSpec::Expectations::ExpectationNotMetError
       rescue => e
-        $stderr.puts("Exception on #{page.url}: #{e.inspect}")
+        @logger.warn("Exception on #{page.url}: #{e.inspect}")
       end
 
       sleep(delay) if @pages.last == page
