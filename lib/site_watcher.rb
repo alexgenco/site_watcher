@@ -10,25 +10,28 @@ class SiteWatcher
   def self.watch(opts={}, &block)
     trap(:SIGINT) { abort(?\n) }
 
-    delay = opts.fetch(:every, 5)
     dsl = DSL::Top.new
     dsl.instance_eval(&block)
 
-    new(dsl.pages).watch(delay)
+    delay = opts.fetch(:every, 5)
+    logger = opts.fetch(:logger, ::Logger.new($stderr))
+    new(dsl.__sw_pages, logger).watch(delay)
   end
 
-  def initialize(pages)
+  def initialize(pages, logger)
     @pages = pages
-    @logger = ::Logger.new($stderr)
+    @logger = logger
     @force = false
   end
 
   def watch(delay)
-    capture_usr1 do
+    capture_signals do
       loop do
         break if @pages.empty?
+
         force = @force
         @force &&= false
+        @logger.warn("Received USR1, forcing fulfillment of all tests") if force
 
         @pages.each do |page|
           begin
