@@ -46,6 +46,10 @@ end
 
 This script will block until all expectations have been fulfilled.
 
+## Testing fulfillment
+
+You can force a `SiteWatcher.watch` process to run each of its `fulfilled` blocks by sending it the `USR1` signal. The process will continue to run as normal after each block has been called.
+
 ## Contributing
 
 1. Fork it ( https://github.com/[my-github-username]/site_watcher/fork )
