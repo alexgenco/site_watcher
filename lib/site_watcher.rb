@@ -31,7 +31,6 @@ class SiteWatcher
 
         force = @force
         @force &&= false
-        @logger.warn("Received USR1, forcing fulfillment of all tests") if force
 
         @pages.each do |page|
           begin
@@ -51,12 +50,20 @@ class SiteWatcher
   private
 
   def capture_signals
-    ::Signal.trap(:USR1) { @force = true }
-    ::Signal.trap(:INT)  { abort(?\n) }
+    ::Signal.trap(:INT) { abort(?\n) }
+
+    ::Signal.trap(:USR1) do
+      ::Thread.new do
+        @logger.warn("Received USR1, next round of tests will force fulfillment")
+      end
+
+      @force = true
+    end
+
     yield
   ensure
-    ::Signal.trap(:USR1, "DEFAULT")
     ::Signal.trap(:INT, "DEFAULT")
+    ::Signal.trap(:USR1, "DEFAULT")
   end
 
   module DSL
