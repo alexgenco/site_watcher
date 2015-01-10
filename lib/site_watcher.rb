@@ -20,28 +20,42 @@ class SiteWatcher
   def initialize(pages)
     @pages = pages
     @logger = ::Logger.new($stderr)
+    @force = false
   end
 
   def watch(delay)
-    loop do
-      break if @pages.empty?
+    capture_usr1 do
+      loop do
+        break if @pages.empty?
+        force = @force
+        @force &&= false
 
-      @pages.each do |page|
-        begin
-          page.__run!
-          @pages.delete(page)
-        rescue ::RSpec::Expectations::ExpectationNotMetError
-        rescue => e
-          @logger.warn("Exception on #{page.url}: #{e.inspect}")
+        @pages.each do |page|
+          begin
+            page.__sw_run!(force)
+            @pages.delete(page)
+          rescue ::RSpec::Expectations::ExpectationNotMetError
+          rescue => e
+            @logger.warn("Exception on #{page.url}: #{e.inspect}")
+          end
         end
-      end
 
-      sleep(delay)
+        sleep(delay)
+      end
     end
   end
 
+  private
+
+  def capture_usr1
+    ::Signal.trap(:USR1) { @force = true }
+    yield
+  ensure
+    ::Signal.trap(:USR1, "DEFAULT")
+  end
+
   module DSL
-    class Top < BasicObject
+    class Top
       attr_reader :pages
 
       def initialize
@@ -55,7 +69,7 @@ class SiteWatcher
       end
     end
 
-    class Page < BasicObject
+    class Page
       include ::RSpec::Matchers
       attr_reader :url
 
@@ -72,7 +86,7 @@ class SiteWatcher
         @fulfilled = block
       end
 
-      def __run!
+      def __sw_run!(force=false)
         ::OpenURI.open_uri(@url) do |response|
           case response.content_type
           when /json/i
@@ -81,9 +95,21 @@ class SiteWatcher
             page = ::Capybara::Node::Simple.new(response.read)
           end
 
-          @tests.each { |test| test.call(page) }
-          @fulfilled.call(@url) if @fulfilled.respond_to?(:call)
+          begin
+            @tests.each { |test| test.call(page) }
+          rescue ::RSpec::Expectations::ExpectationNotMetError => err
+            __sw_fulfilled! if force
+            raise(err)
+          end
+
+          __sw_fulfilled!
         end
+      end
+
+      private
+
+      def __sw_fulfilled!
+        @fulfilled.call(@url) if @fulfilled.respond_to?(:call)
       end
     end
   end
