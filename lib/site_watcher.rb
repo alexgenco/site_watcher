@@ -50,25 +50,27 @@ class SiteWatcher
 
   private
 
-  def capture_usr1
+  def capture_signals
     ::Signal.trap(:USR1) { @force = true }
+    ::Signal.trap(:INT)  { abort(?\n) }
     yield
   ensure
     ::Signal.trap(:USR1, "DEFAULT")
+    ::Signal.trap(:INT, "DEFAULT")
   end
 
   module DSL
     class Top
-      attr_reader :pages
+      attr_reader :__sw_pages
 
       def initialize
-        @pages = []
+        @__sw_pages = []
       end
 
       def page(url, &block)
         page = Page.new(url)
         page.instance_eval(&block)
-        @pages << page
+        @__sw_pages << page
       end
     end
 
@@ -77,20 +79,20 @@ class SiteWatcher
       attr_reader :url
 
       def initialize(url)
-        @url = url
-        @tests = []
+        @__sw_url = url
+        @__sw_tests = []
       end
 
       def test(&block)
-        @tests << block
+        @__sw_tests << block
       end
 
       def fulfilled(&block)
-        @fulfilled = block
+        @__sw_fulfilled = block
       end
 
       def __sw_run!(force=false)
-        ::OpenURI.open_uri(@url) do |response|
+        ::OpenURI.open_uri(@__sw_url) do |response|
           case response.content_type
           when /json/i
             page = ::JSON.parse(response.read)
@@ -99,7 +101,7 @@ class SiteWatcher
           end
 
           begin
-            @tests.each { |test| test.call(page) }
+            @__sw_tests.each { |test| test.call(page) }
           rescue ::RSpec::Expectations::ExpectationNotMetError => err
             __sw_fulfilled! if force
             raise(err)
@@ -112,7 +114,7 @@ class SiteWatcher
       private
 
       def __sw_fulfilled!
-        @fulfilled.call(@url) if @fulfilled.respond_to?(:call)
+        @__sw_fulfilled.call(@__sw_url) if @__sw_fulfilled.respond_to?(:call)
       end
     end
   end
