@@ -15,16 +15,17 @@ class SiteWatcher
 
     delay = opts.fetch(:every, 5)
     logger = opts.fetch(:logger, ::Logger.new($stderr))
-    new(dsl.__sw_pages, logger).watch(delay)
+    new(dsl.__sw_pages, delay, logger).watch
   end
 
-  def initialize(pages, logger)
+  def initialize(pages, delay, logger)
     @pages = pages
+    @delay = delay
     @logger = logger
     @force = false
   end
 
-  def watch(delay)
+  def watch
     capture_signals do
       loop do
         break if @pages.empty?
@@ -42,7 +43,7 @@ class SiteWatcher
           end
         end
 
-        sleep(delay)
+        sleep(@delay)
       end
     end
   end
