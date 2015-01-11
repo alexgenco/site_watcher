@@ -1,4 +1,5 @@
 require "stringio"
+require "logger"
 
 RSpec.describe "signal handling" do
   describe "USR1" do
