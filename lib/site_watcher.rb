@@ -39,7 +39,7 @@ class SiteWatcher
             @pages.delete(page)
           rescue ::RSpec::Expectations::ExpectationNotMetError
           rescue => e
-            @logger.warn("Exception on #{page.url}: #{e.inspect}")
+            @logger.warn("Exception on #{page.__sw_url}: #{e.inspect}")
           end
         end
 
@@ -84,7 +84,7 @@ class SiteWatcher
 
     class Page
       include ::RSpec::Matchers
-      attr_reader :url
+      attr_reader :__sw_url
 
       def initialize(url)
         @__sw_url = url
