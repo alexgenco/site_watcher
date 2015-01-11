@@ -4,12 +4,6 @@ require "stringio"
 require "logger"
 
 RSpec.describe "SiteWatcher.watch" do
-  around do |spec|
-    Timeout.timeout(1) do
-      spec.run
-    end
-  end
-
   it "watches an HTML page" do
     _fulfilled = false
 
