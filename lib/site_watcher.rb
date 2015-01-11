@@ -56,7 +56,7 @@ class SiteWatcher
     ::Signal.trap(:USR1) do
       ::Thread.new do
         @logger.warn("Received USR1, next round of tests will force fulfillment")
-      end
+      end.join
 
       @force = true
     end
