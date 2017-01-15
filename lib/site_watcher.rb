@@ -36,7 +36,7 @@ class SiteWatcher
         @pages.each do |page|
           begin
             page.__sw_run!(force)
-            @pages.delete(page)
+            @pages.delete(page) if page.__sw_remove_on_fulfillment
           rescue ::RSpec::Expectations::ExpectationNotMetError
           rescue => e
             @logger.warn("Exception on #{page.__sw_url}: #{e.inspect}")
@@ -84,11 +84,12 @@ class SiteWatcher
 
     class Page
       include ::RSpec::Matchers
-      attr_reader :__sw_url
+      attr_reader :__sw_url, :__sw_remove_on_fulfillment
 
       def initialize(url)
         @__sw_url = url
         @__sw_tests = []
+        @__sw_remove_on_fulfillment = true
       end
 
       def test(&block)
@@ -97,6 +98,10 @@ class SiteWatcher
 
       def fulfilled(&block)
         @__sw_fulfilled = block
+      end
+
+      def remove_on_fulfillment(bool)
+        @__sw_remove_on_fulfillment = !!bool
       end
 
       def __sw_run!(force=false)

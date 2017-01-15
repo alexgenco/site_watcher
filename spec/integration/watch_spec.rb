@@ -110,6 +110,30 @@ RSpec.describe "SiteWatcher.watch" do
     expect(_fulfilled).to be(false)
   end
 
+  it "continues running fulfilled events using remove_on_fulfillment=false" do
+    _fulfilled = 0
+
+    fiber = Fiber.new do
+      SiteWatcher.watch(:every => 0) do
+        page("http://httpbin.org/html") do
+          remove_on_fulfillment false
+
+          test do |html|
+            Fiber.yield(_fulfilled)
+            expect(html).to have_selector("body")
+          end
+
+          fulfilled do
+            _fulfilled += 1
+          end
+        end
+      end
+    end
+
+    expect(fiber.resume).to eq(0)
+    expect(fiber.resume).to eq(1)
+  end
+
   it "logs on exceptions" do
     stderr = StringIO.new
     logger = Logger.new(stderr)
