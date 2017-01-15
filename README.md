@@ -34,6 +34,9 @@ SiteWatcher.watch(every: 2) do
 
   # JSON
   page("http://www.bestbuy.com/api/1.0/product/summaries?skus=7522006") do
+    # Continue watching this page even after fulfillment
+    remove_on_fulfillment false
+
     test do |json|
       # `json` is a hash of the parsed JSON body.
       expect(
@@ -44,7 +47,7 @@ SiteWatcher.watch(every: 2) do
 end
 ```
 
-This script will block until all expectations have been fulfilled.
+This script will block until all expectations have been fulfilled and removed. Using `remove_on_fulfillment false` will cause it to block indefinitely.
 
 ## Testing fulfillment
 
