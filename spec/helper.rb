@@ -1,6 +1,7 @@
 require "rubygems"
 require "bundler/setup"
 require "site_watcher"
+require "timeout"
 
 RSpec.configure do |config|
   config.disable_monkey_patching!
@@ -9,6 +10,6 @@ RSpec.configure do |config|
   Kernel.srand config.seed
 
   config.around do |spec|
-    Timeout.timeout(1) { spec.run }
+    Timeout.timeout(3) { spec.run }
   end
 end
