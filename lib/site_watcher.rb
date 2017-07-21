@@ -89,6 +89,7 @@ class SiteWatcher
       def initialize(url)
         @__sw_url = url
         @__sw_tests = []
+        @__sw_headers = {}
         @__sw_remove_on_fulfillment = true
       end
 
@@ -100,12 +101,16 @@ class SiteWatcher
         @__sw_fulfilled = block
       end
 
+      def headers(hash)
+        @__sw_headers = hash
+      end
+
       def remove_on_fulfillment(bool)
         @__sw_remove_on_fulfillment = !!bool
       end
 
       def __sw_run!(force=false)
-        ::OpenURI.open_uri(@__sw_url) do |response|
+        ::OpenURI.open_uri(@__sw_url, @__sw_headers) do |response|
           case response.content_type
           when /json/i
             page = ::JSON.parse(response.read)
