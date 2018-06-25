@@ -15,11 +15,20 @@ class SiteWatcher
 
     delay = opts.fetch(:every, 5)
     logger = opts.fetch(:logger, ::Logger.new($stderr))
-    new(dsl.__sw_pages, delay, logger).watch
+
+    new(
+      dsl.__sw_before_hooks,
+      dsl.__sw_pages,
+      dsl.__sw_after_hooks,
+      delay,
+      logger
+    ).watch
   end
 
-  def initialize(pages, delay, logger)
+  def initialize(before_hooks, pages, after_hooks, delay, logger)
+    @before_hooks = before_hooks
     @pages = pages
+    @after_hooks = after_hooks
     @delay = delay
     @logger = logger
     @force = false
@@ -61,18 +70,31 @@ class SiteWatcher
       @force = true
     end
 
+    @before_hooks.each(&:call)
     yield
   ensure
     ::Signal.trap(:INT, "DEFAULT")
     ::Signal.trap(:USR1, "DEFAULT")
+
+    @after_hooks.each(&:call)
   end
 
   module DSL
     class Top
-      attr_reader :__sw_pages
+      attr_reader :__sw_pages, :__sw_before_hooks, :__sw_after_hooks
 
       def initialize
         @__sw_pages = []
+        @__sw_before_hooks = []
+        @__sw_after_hooks = []
+      end
+
+      def before(&block)
+        @__sw_before_hooks << block
+      end
+
+      def after(&block)
+        @__sw_after_hooks << block
       end
 
       def page(url, &block)
@@ -90,6 +112,7 @@ class SiteWatcher
         @__sw_url = url
         @__sw_tests = []
         @__sw_headers = {}
+        @__sw_fulfilled = nil
         @__sw_remove_on_fulfillment = true
       end
 

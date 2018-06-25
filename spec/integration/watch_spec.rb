@@ -154,4 +154,52 @@ RSpec.describe "SiteWatcher.watch" do
       fiber.resume
     }.to change { stderr.string }.from("").to(/BOOM/)
   end
+
+  it "registers before hooks" do
+    fiber = Fiber.new do
+      SiteWatcher.watch(:every => 0) do
+        before do
+          Fiber.yield(0)
+        end
+
+        before do
+          Fiber.yield(1)
+        end
+
+        page("http://httpbin.org/html") do
+          test do
+            Fiber.yield(2)
+          end
+        end
+      end
+    end
+
+    expect(fiber.resume).to eq(0)
+    expect(fiber.resume).to eq(1)
+    expect(fiber.resume).to eq(2)
+  end
+
+  it "registers after hooks" do
+    fiber = Fiber.new do
+      SiteWatcher.watch(:every => 0) do
+        page("http://httpbin.org/html") do
+          test do
+            Fiber.yield(0)
+          end
+        end
+
+        after do
+          Fiber.yield(1)
+        end
+
+        after do
+          Fiber.yield(2)
+        end
+      end
+    end
+
+    expect(fiber.resume).to eq(0)
+    expect(fiber.resume).to eq(1)
+    expect(fiber.resume).to eq(2)
+  end
 end
