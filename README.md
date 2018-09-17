@@ -49,6 +49,8 @@ end
 
 This script will block until all expectations have been fulfilled and removed. Using `remove_on_fulfillment false` will cause it to block indefinitely.
 
+See [integration specs](spec/integration/watch_spec.rb) for more up-to-date usage examples.
+
 ## Testing fulfillment
 
 You can force a `SiteWatcher.watch` process to run each of its `fulfilled` blocks by sending it the `USR1` signal. The process will continue to run as normal after each block has been called.

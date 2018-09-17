@@ -57,6 +57,24 @@ RSpec.describe "SiteWatcher.watch" do
     expect(_fulfilled).to be(true)
   end
 
+  it "watches an endpoint with POST" do
+    _fulfilled = false
+
+    SiteWatcher.watch(:every => 0) do
+      page("https://httpbin.org/post", method: :post, body: "foobar") do
+        test do |json|
+          expect(json["data"]).to eq("foobar")
+        end
+
+        fulfilled do
+          _fulfilled = true
+        end
+      end
+    end
+
+    expect(_fulfilled).to be(true)
+  end
+
   it "watches multiple pages" do
     _fulfilled = []
 
@@ -82,7 +100,7 @@ RSpec.describe "SiteWatcher.watch" do
       end
     end
 
-    expect(_fulfilled).to eq([:html, :json])
+    expect(_fulfilled).to include(:html, :json)
   end
 
   it "retries when expectations aren't fulfilled" do

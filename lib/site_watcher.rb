@@ -1,10 +1,10 @@
 require "site_watcher/version"
 
 require "capybara"
-require "rspec/expectations"
-require "open-uri"
+require "http"
 require "json"
 require "logger"
+require "rspec/expectations"
 
 class SiteWatcher
   def self.watch(opts={}, &block)
@@ -97,8 +97,8 @@ class SiteWatcher
         @__sw_after_hooks << block
       end
 
-      def page(url, &block)
-        page = Page.new(url)
+      def page(url, **opts, &block)
+        page = Page.new(url, **opts)
         page.instance_eval(&block)
         @__sw_pages << page
       end
@@ -108,10 +108,12 @@ class SiteWatcher
       include ::RSpec::Matchers
       attr_reader :__sw_url, :__sw_remove_on_fulfillment
 
-      def initialize(url)
+      def initialize(url, method: :get, headers: {}, **opts)
         @__sw_url = url
         @__sw_tests = []
-        @__sw_headers = {}
+        @__sw_method = method
+        @__sw_headers = headers
+        @__sw_http_opts = opts
         @__sw_fulfilled = nil
         @__sw_remove_on_fulfillment = true
       end
@@ -128,28 +130,38 @@ class SiteWatcher
         @__sw_headers = hash
       end
 
+      def http_method(http_method)
+        @__sw_http_method = http_method
+      end
+
+      def body(body)
+        @__sw_body = body
+      end
+
       def remove_on_fulfillment(bool)
         @__sw_remove_on_fulfillment = !!bool
       end
 
       def __sw_run!(force=false)
-        ::OpenURI.open_uri(@__sw_url, @__sw_headers) do |response|
-          case response.content_type
-          when /json/i
-            page = ::JSON.parse(response.read)
-          else
-            page = ::Capybara::Node::Simple.new(response.read)
-          end
+        response = ::HTTP
+          .headers(@__sw_headers)
+          .request(@__sw_method, @__sw_url, **@__sw_http_opts)
 
-          begin
-            @__sw_tests.each { |test| test.call(page) }
-          rescue ::RSpec::Expectations::ExpectationNotMetError => err
-            __sw_fulfilled! if force
-            raise(err)
-          end
-
-          __sw_fulfilled!
+        case response.content_type.mime_type
+        when /json/i
+          page = ::JSON.parse(response.to_s)
+        else
+          page = ::Capybara::Node::Simple.new(response.to_s)
         end
+
+        begin
+          @__sw_tests.each { |test| test.call(page) }
+        rescue ::RSpec::Expectations::ExpectationNotMetError => err
+          __sw_fulfilled! if force
+          raise(err)
+        end
+
+        __sw_fulfilled!
       end
 
       private
