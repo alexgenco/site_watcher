@@ -48,10 +48,6 @@ RSpec.describe "signal handling" do
               Fiber.yield
               expect(html).not_to have_selector("body")
             end
-
-            fulfilled do
-              _fulfilled += 1
-            end
           end
         end
       end

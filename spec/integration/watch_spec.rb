@@ -1,154 +1,138 @@
 require "fiber"
-require "stringio"
 require "logger"
+require "stringio"
 
 RSpec.describe "SiteWatcher.watch" do
   it "watches an HTML page" do
     _fulfilled = false
 
-    SiteWatcher.watch(:every => 0) do
-      page("http://httpbin.org/html") do
-        test do |html|
-          expect(html).to have_selector("body h1")
-        end
+    expect do |y|
+      SiteWatcher.watch(:every => 0) do
+        page("http://httpbin.org/html") do
+          test do |html|
+            expect(html).to have_selector("body h1")
+          end
 
-        fulfilled do
-          _fulfilled = true
+          fulfilled(&y)
         end
       end
-    end
-
-    expect(_fulfilled).to be(true)
+    end.to yield_control
   end
 
   it "watches a JSON endpoint" do
     _fulfilled = false
 
-    SiteWatcher.watch(:every => 0) do
-      page("http://httpbin.org/get") do
-        test do |json|
-          expect(json["headers"]["Host"]).to eq("httpbin.org")
-        end
+    expect do |y|
+      SiteWatcher.watch(:every => 0) do
+        page("http://httpbin.org/get") do
+          test do |json|
+            expect(json["headers"]["Host"]).to eq("httpbin.org")
+          end
 
-        fulfilled do
-          _fulfilled = true
+          fulfilled(&y)
         end
       end
-    end
-
-    expect(_fulfilled).to be(true)
+    end.to yield_control
   end
 
   it "watches an XML endpoint" do
     _fulfilled = false
 
-    SiteWatcher.watch(:every => 0) do
-      page("http://httpbin.org/xml") do
-        test do |xml|
-          expect(xml).to have_xpath(".//slideshow/slide")
-        end
+    expect do |y|
+      SiteWatcher.watch(:every => 0) do
+        page("http://httpbin.org/xml") do
+          test do |xml|
+            expect(xml).to have_xpath(".//slideshow/slide")
+          end
 
-        fulfilled do
-          _fulfilled = true
+          fulfilled(&y)
         end
       end
-    end
-
-    expect(_fulfilled).to be(true)
+    end.to yield_control
   end
 
   it "watches an endpoint with POST" do
-    _fulfilled = false
+    expect do |y|
+      SiteWatcher.watch(:every => 0) do
+        page("https://httpbin.org/post", method: :post, body: "foobar") do
+          test do |json|
+            expect(json["data"]).to eq("foobar")
+          end
 
-    SiteWatcher.watch(:every => 0) do
-      page("https://httpbin.org/post", method: :post, body: "foobar") do
-        test do |json|
-          expect(json["data"]).to eq("foobar")
-        end
-
-        fulfilled do
-          _fulfilled = true
+          fulfilled(&y)
         end
       end
-    end
-
-    expect(_fulfilled).to be(true)
+    end.to yield_control
   end
 
   it "watches multiple pages" do
-    _fulfilled = []
+    expect do |y|
+      SiteWatcher.watch(:every => 0) do
+        page("http://httpbin.org/html") do
+          test do |html|
+            expect(html).to have_selector("body h1")
+          end
 
-    SiteWatcher.watch(:every => 0) do
-      page("http://httpbin.org/html") do
-        test do |html|
-          expect(html).to have_selector("body h1")
+          fulfilled(&y)
         end
 
-        fulfilled do
-          _fulfilled << :html
-        end
-      end
+        page("http://httpbin.org/get") do
+          test do |json|
+            expect(json["headers"]["Host"]).to eq("httpbin.org")
+          end
 
-      page("http://httpbin.org/get") do
-        test do |json|
-          expect(json["headers"]["Host"]).to eq("httpbin.org")
-        end
-
-        fulfilled do
-          _fulfilled << :json
+          fulfilled(&y)
         end
       end
-    end
-
-    expect(_fulfilled).to include(:html, :json)
+    end.to yield_successive_args(/html$/, /get$/)
   end
 
   it "retries when expectations aren't fulfilled" do
-    _fulfilled = false
-    _tries = 0
+    tries = 0
 
-    fiber = Fiber.new do
-      SiteWatcher.watch(:every => 0) do
-        page("http://httpbin.org/html") do
-          test do |html|
-            Fiber.yield(_tries += 1)
-            expect(html).not_to have_selector("body")
-          end
+    expect do |y|
+      fiber = Fiber.new(0) do |n|
+        SiteWatcher.watch(:every => 0) do
+          page("http://httpbin.org/html") do
+            test do |html|
+              Fiber.yield(tries += 1)
+              expect(html).not_to have_selector("body")
+            end
 
-          fulfilled do
-            _fulfilled = true
+            fulfilled(&y)
           end
         end
       end
-    end
 
-    expect(fiber.resume).to eq(1)
-    expect(fiber.resume).to eq(2)
-    expect(_fulfilled).to be(false)
+      expect(fiber.resume).to eq(1)
+      expect(fiber.resume).to eq(2)
+    end.not_to yield_control
   end
 
   it "continues running fulfilled events using remove_on_fulfillment=false" do
-    _fulfilled = 0
+    tries = 0
 
-    fiber = Fiber.new do
-      SiteWatcher.watch(:every => 0) do
-        page("http://httpbin.org/html") do
-          remove_on_fulfillment false
+    expect do |y|
+      fiber = Fiber.new do
+        SiteWatcher.watch(:every => 0) do
+          page("http://httpbin.org/html") do
+            remove_on_fulfillment false
 
-          test do |html|
-            Fiber.yield(_fulfilled)
-            expect(html).to have_selector("body")
-          end
+            test do |html|
+              Fiber.yield(tries += 1)
+              expect(html).to have_selector("body")
+            end
 
-          fulfilled do
-            _fulfilled += 1
+            fulfilled(&y)
           end
         end
       end
-    end
 
-    expect(fiber.resume).to eq(0)
-    expect(fiber.resume).to eq(1)
+      expect(fiber.resume).to eq(1)
+      expect(fiber.resume).to eq(2)
+
+      fiber.resume
+    end.to yield_successive_args(/html$/, /html$/)
   end
 
   it "logs on exceptions" do
