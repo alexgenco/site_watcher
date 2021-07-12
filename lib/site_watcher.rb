@@ -115,6 +115,7 @@ class SiteWatcher
         @__sw_headers = headers
         @__sw_http_opts = opts
         @__sw_fulfilled = nil
+        @__sw_fetch = nil
         @__sw_remove_on_fulfillment = true
       end
 
@@ -124,6 +125,10 @@ class SiteWatcher
 
       def fulfilled(&block)
         @__sw_fulfilled = block
+      end
+
+      def fetch(&block)
+        @__sw_fetch = block
       end
 
       def headers(hash)
@@ -143,19 +148,23 @@ class SiteWatcher
       end
 
       def __sw_run!(force=false)
-        response = ::HTTP
-          .headers(@__sw_headers)
-          .request(@__sw_method, @__sw_url, **@__sw_http_opts)
-
-        case response.content_type.mime_type
-        when /json/i
-          page = ::JSON.parse(response.to_s)
+        if @__sw_fetch
+          response = @__sw_fetch.call(@__sw_url)
         else
-          page = ::Capybara::Node::Simple.new(response.to_s)
+          response = ::HTTP
+            .headers(@__sw_headers)
+            .request(@__sw_method, @__sw_url, **@__sw_http_opts)
+
+          case response.content_type.mime_type
+          when /json/i
+            response = ::JSON.parse(response.to_s)
+          else
+            response = ::Capybara::Node::Simple.new(response.to_s)
+          end
         end
 
         begin
-          @__sw_tests.each { |test| test.call(page) }
+          @__sw_tests.each { |test| test.call(response) }
         rescue ::RSpec::Expectations::ExpectationNotMetError => err
           __sw_fulfilled! if force
           raise(err)

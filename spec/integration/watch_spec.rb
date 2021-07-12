@@ -204,4 +204,24 @@ RSpec.describe "SiteWatcher.watch" do
     expect(fiber.resume).to eq(1)
     expect(fiber.resume).to eq(2)
   end
+
+  it "registers custom request fetching" do
+    fiber = Fiber.new do
+      SiteWatcher.watch(:every => 0) do
+        page("http://httpbin.org/html") do
+          fetch do |url|
+            Fiber.yield(url)
+            {foo: "bar"}
+          end
+
+          test do |response|
+            Fiber.yield(response)
+          end
+        end
+      end
+    end
+
+    expect(fiber.resume).to eq("http://httpbin.org/html")
+    expect(fiber.resume).to eq(foo: "bar")
+  end
 end
