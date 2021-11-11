@@ -137,7 +137,7 @@ RSpec.describe "SiteWatcher.watch" do
 
   it "logs on exceptions" do
     stderr = StringIO.new
-    logger = Logger.new(stderr)
+    logger = Logger.new(stderr, level: :warn)
 
     fiber = Fiber.new do
       SiteWatcher.watch(:every => 0, :logger => logger) do

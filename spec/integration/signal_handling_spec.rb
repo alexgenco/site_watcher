@@ -4,7 +4,7 @@ require "logger"
 RSpec.describe "signal handling" do
   describe "USR1" do
     it "signals to run the fulfilled block of the next test" do
-      logger = Logger.new("/dev/null")
+      logger = Logger.new("/dev/null", level: :warn)
       _fulfilled = 0
 
       fiber = Fiber.new do
@@ -39,7 +39,7 @@ RSpec.describe "signal handling" do
 
     it "logs" do
       stderr = StringIO.new
-      logger = Logger.new(stderr)
+      logger = Logger.new(stderr, level: :warn)
 
       fiber = Fiber.new do
         SiteWatcher.watch(:every => 0, :logger => logger) do

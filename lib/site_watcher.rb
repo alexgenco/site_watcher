@@ -8,29 +8,30 @@ require "rspec/expectations"
 
 class SiteWatcher
   def self.watch(opts={}, &block)
-    trap(:SIGINT) { abort(?\n) }
-
     dsl = DSL::Top.new
     dsl.instance_eval(&block)
 
     delay = opts.fetch(:every, 5)
-    logger = opts.fetch(:logger, ::Logger.new($stderr))
+    logger = opts.fetch(:logger, ::Logger.new($stderr, level: :warn))
+    timeout = opts.fetch(:timeout, {connect: 3, read: 10})
 
     new(
       dsl.__sw_before_hooks,
       dsl.__sw_pages,
       dsl.__sw_after_hooks,
       delay,
-      logger
+      logger,
+      timeout,
     ).watch
   end
 
-  def initialize(before_hooks, pages, after_hooks, delay, logger)
+  def initialize(before_hooks, pages, after_hooks, delay, logger, timeout)
     @before_hooks = before_hooks
     @pages = pages
     @after_hooks = after_hooks
     @delay = delay
     @logger = logger
+    @timeout = timeout
     @force = false
   end
 
@@ -44,7 +45,7 @@ class SiteWatcher
 
         @pages.each do |page|
           begin
-            page.__sw_run!(force)
+            page.__sw_run!(force, @logger, @timeout)
             @pages.delete(page) if page.__sw_remove_on_fulfillment
           rescue ::RSpec::Expectations::ExpectationNotMetError
           rescue => e
@@ -147,11 +148,13 @@ class SiteWatcher
         @__sw_remove_on_fulfillment = !!bool
       end
 
-      def __sw_run!(force=false)
+      def __sw_run!(force, logger, timeout)
         if @__sw_fetch
           response = @__sw_fetch.call(@__sw_url)
         else
           response = ::HTTP
+            .use(logging: {logger: logger})
+            .timeout(timeout)
             .headers(@__sw_headers)
             .request(@__sw_method, @__sw_url, **@__sw_http_opts)
 
