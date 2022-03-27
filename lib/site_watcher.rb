@@ -140,6 +140,7 @@ class SiteWatcher
         @__sw_http_method = http_method
       end
 
+      # FIXME this isn't even used?
       def body(body)
         @__sw_body = body
       end
@@ -149,14 +150,15 @@ class SiteWatcher
       end
 
       def __sw_run!(force, logger, timeout)
+        client = ::HTTP
+          .use(logging: {logger: logger})
+          .timeout(timeout)
+          .headers(@__sw_headers)
+
         if @__sw_fetch
-          response = @__sw_fetch.call(@__sw_url)
+          response = @__sw_fetch.call(@__sw_url, client)
         else
-          response = ::HTTP
-            .use(logging: {logger: logger})
-            .timeout(timeout)
-            .headers(@__sw_headers)
-            .request(@__sw_method, @__sw_url, **@__sw_http_opts)
+          response = client.request(@__sw_method, @__sw_url, **@__sw_http_opts)
 
           case response.content_type.mime_type
           when /json/i

@@ -209,8 +209,8 @@ RSpec.describe "SiteWatcher.watch" do
     fiber = Fiber.new do
       SiteWatcher.watch(:every => 0) do
         page("http://httpbin.org/html") do
-          fetch do |url|
-            Fiber.yield(url)
+          fetch do |url, client|
+            Fiber.yield([url, client])
             {foo: "bar"}
           end
 
@@ -221,7 +221,11 @@ RSpec.describe "SiteWatcher.watch" do
       end
     end
 
-    expect(fiber.resume).to eq("http://httpbin.org/html")
+    expect(fiber.resume).to satisfy do |(url, client)|
+      expect(url).to eq("http://httpbin.org/html")
+      expect(client).to be_a(::HTTP::Client)
+    end
+
     expect(fiber.resume).to eq(foo: "bar")
   end
 end
